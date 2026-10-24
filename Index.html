@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIRE Calculator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0d14; color: #e8ecf6; font-family: system-ui, sans-serif; font-size: 14px; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #2a3250; border-radius: 2px; }
+  .layout { display: grid; grid-template-columns: 310px 1fr; height: 100vh; overflow: hidden; }
+  .sidebar { background: #0e1220; border-right: 1px solid #1e2640; overflow-y: auto; padding: 20px 16px 60px; }
+  .main { overflow-y: auto; padding: 22px 22px 60px; }
+  h1 { font-size: 15px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 2px; }
+  .sub { font-size: 11px; color: #6b748e; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #1e2640; }
+  .sec-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #5b8df6; margin: 18px 0 10px; display: flex; align-items: center; gap: 6px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 11px; color: #6b748e; margin-bottom: 4px; }
+  .field input[type=number] { width: 100%; background: #131826; border: 1px solid #2a3250; border-radius: 7px; padding: 8px 10px; color: #e8ecf6; font-size: 13px; font-weight: 600; font-family: monospace; outline: none; }
+  .field input[type=number]:focus { border-color: #5b8df6; }
+  .field input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .tog { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer; user-select: none; }
+  .tog-track { width: 34px; height: 18px; border-radius: 9px; position: relative; transition: background .2s; flex-shrink: 0; }
+  .tog-thumb { position: absolute; top: 2px; width: 14px; height: 14px; border-radius: 7px; background: #fff; transition: left .15s; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+  .tog-label { font-size: 12px; }
+  .card { background: #131826; border: 1px solid #1c2235; border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+  .hero-pct { font-size: 38px; font-weight: 900; font-family: monospace; line-height: 1; }
+  .fire-badge { border-radius: 10px; padding: 10px 16px; text-align: center; border: 1px solid; min-width: 120px; }
+  .bar-bg { height: 5px; background: #1e2640; border-radius: 3px; overflow: hidden; margin: 14px 0 6px; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+  .kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+  .kpi { background: #131826; border: 1px solid #1c2235; border-radius: 10px; padding: 12px 14px; }
+  .kpi-l { font-size: 10px; color: #3d4560; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; }
+  .kpi-v { font-size: 16px; font-weight: 700; font-family: monospace; }
+  .kpi-s { font-size: 11px; color: #6b748e; margin-top: 3px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: monospace; }
+  th { padding: 8px 10px; text-align: right; color: #3d4560; font-size: 10px; text-transform: uppercase; white-space: nowrap; }
+  td { padding: 7px 10px; text-align: right; border-top: 1px solid #1e2640; }
+  .prop-box { border: 1px solid #2a3250; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+  .prop-box.on { border-color: #f59e0b44; background: #f59e0b06; }
+  .prop-box.on3 { border-color: #a78bfa44; background: #a78bfa06; }
+  .ibox { background: #0a0d14; border: 1px solid #1e2640; border-radius: 7px; padding: 9px 12px; margin-top: 8px; }
+  .irow { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
+  .irow .lbl { color: #6b748e; }
+  .irow .val { font-family: monospace; font-weight: 600; }
+  .note { font-size: 11px; color: #3d4560; line-height: 1.8; margin-top: 12px; }
+  .divider { height: 1px; background: #1e2640; margin: 8px 0 14px; }
+  @media(max-width:700px) { .layout { display: block; height: auto; overflow: visible; } .sidebar,.main { height: auto; overflow: visible; } .kpis { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="sidebar">
+    <h1>FIRE Calculator 🎯</h1>
+    <div class="sub">Plan your path to financial independence through real estate &amp; investments</div>
+
+    <div class="sec-title">🎯 Goal</div>
+    <div class="field"><label>Monthly expenses in FIRE (€)</label><input type="number" id="f-target" value="2000" min="500" max="10000" step="1" oninput="go()"></div>
+    <div class="tog" onclick="togBool('inflOn')">
+      <div class="tog-track" id="trk-inflOn" style="background:#1e2640"><div class="tog-thumb" id="thm-inflOn" style="left:2px"></div></div>
+      <span class="tog-label" id="lbl-inflOn" style="color:#6b748e">Consider inflation</span>
+    </div>
+    <div id="infl-row" style="display:none">
+      <div class="field"><label>Annual inflation (%)</label><input type="number" id="f-infl" value="2" min="0.1" max="5" step="0.1" oninput="go()"></div>
+    </div>
+
+    <div class="sec-title">💰 Income <span style="font-size:9px;color:#3d4560;text-transform:none;letter-spacing:0">(visual only — does not affect calculations)</span></div>
+    <div class="field"><label>Net monthly salary (€)</label><input type="number" id="f-salary" value="3900" min="0" max="30000" step="1" oninput="go()"></div>
+    <div class="ibox" id="income-box"></div>
+
+    <div class="sec-title">📈 Savings &amp; portfolio</div>
+    <div class="field"><label>Monthly savings (€)</label><input type="number" id="f-savings" value="2200" min="0" max="20000" step="1" oninput="go()"></div>
+    <div class="field"><label>Monthly ETF investment (€)</label><input type="number" id="f-etfAmt" value="2200" min="0" max="20000" step="1" oninput="go()"></div>
+    <div class="ibox" id="savings-box"></div>
+    <div class="field"><label>Expected annual ETF return (%)</label><input type="number" id="f-etfRet" value="7" min="1" max="15" step="0.1" oninput="go()"></div>
+
+    <div class="sec-title">🏠 Properties</div>
+
+    <!-- Prop1 -->
+    <div class="prop-box" style="border-color:#5b8df644;background:#5b8df606">
+      <div style="font-size:11px;color:#5b8df6;font-weight:700;margin-bottom:10px">● Primary property — always active</div>
+      <div class="field"><label>Gross rental income (€)</label><input type="number" id="f-p1g" value="1320" min="0" max="10000" step="1" oninput="go()"></div>
+      <div class="field"><label>Taxable rental base (€)</label><input type="number" id="f-p1b" value="1200" min="0" max="10000" step="1" oninput="go()"></div>
+      <div class="field"><label>Rental tax rate (%)</label><input type="number" id="f-p1t" value="10" min="0" max="26" step="0.1" oninput="go()"></div>
+      <div class="field"><label>Monthly mortgage payment (€)</label><input type="number" id="f-p1m" value="379" min="0" max="5000" step="1" oninput="go()"></div>
+      <div class="ibox" id="p1-box"></div>
+    </div>
+
+    <!-- Prop2 -->
+    <div class="prop-box" id="p2-box-outer">
+      <div class="tog" onclick="togBool('p2on')">
+        <div class="tog-track" id="trk-p2on" style="background:#1e2640"><div class="tog-thumb" id="thm-p2on" style="left:2px"></div></div>
+        <span class="tog-label" id="lbl-p2on" style="color:#6b748e;font-weight:600">Property 2</span>
+      </div>
+      <div id="p2-fields" style="display:none">
+        <div class="divider"></div>
+        <div class="field"><label>Purchase year (years from now)</label><input type="number" id="f-p2yr" value="3" min="1" max="11" step="1" oninput="go()"></div>
+        <div class="field"><label>Purchase price (€)</label><input type="number" id="f-p2p" value="210000" min="50000" max="1000000" step="1000" oninput="go()"></div>
+        <div class="field"><label>LTV — financed portion (%)</label><input type="number" id="f-p2l" value="75" min="50" max="80" step="0.1" oninput="go()"></div>
+        <div class="field"><label>Mortgage rate (%)</label><input type="number" id="f-p2r" value="3.5" min="0.5" max="10" step="0.05" oninput="go()"></div>
+        <div class="field"><label>Gross rental yield (%)</label><input type="number" id="f-p2y" value="5.5" min="1" max="12" step="0.05" oninput="go()"></div>
+        <div class="ibox" id="p2-box"></div>
+      </div>
+    </div>
+
+    <!-- Prop3 -->
+    <div class="prop-box" id="p3-box-outer">
+      <div class="tog" onclick="togBool('p3on')">
+        <div class="tog-track" id="trk-p3on" style="background:#1e2640"><div class="tog-thumb" id="thm-p3on" style="left:2px"></div></div>
+        <span class="tog-label" id="lbl-p3on" style="color:#6b748e;font-weight:600">Property 3</span>
+      </div>
+      <div id="p3-fields" style="display:none">
+        <div class="divider"></div>
+        <div class="field"><label>Year acquisto (years from now)</label><input type="number" id="f-p3yr" value="7" min="1" max="11" step="1" oninput="go()"></div>
+        <div class="field"><label>Prezzo acquisto (€)</label><input type="number" id="f-p3p" value="220000" min="50000" max="1000000" step="1000" oninput="go()"></div>
+        <div class="field"><label>LTV — quota finanziata (%)</label><input type="number" id="f-p3l" value="70" min="50" max="80" step="0.1" oninput="go()"></div>
+        <div class="field"><label>Tasso mutuo (%)</label><input type="number" id="f-p3r" value="3.8" min="0.5" max="10" step="0.05" oninput="go()"></div>
+        <div class="field"><label>Gross rental yield (%)</label><input type="number" id="f-p3y" value="5.2" min="1" max="12" step="0.05" oninput="go()"></div>
+        <div class="ibox" id="p3-box"></div>
+      </div>
+    </div>
+  </div><!-- /sidebar -->
+
+  <div class="main">
+    <div class="card" id="hero-card"></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">Monthly income toward FIRE</div>
+      <div style="font-size:11px;color:#6b748e;margin-bottom:12px">Net rental income + 4% ETF withdrawal (from year 10) vs target</div>
+      <div style="display:flex;gap:14px;font-size:11px;color:#6b748e;margin-bottom:14px">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#2dd4a0;border-radius:2px;margin-right:4px"></span>Rental</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#a78bfa;border-radius:2px;margin-right:4px"></span>ETF 4%</span>
+        <span><span style="display:inline-block;width:16px;height:2px;background:#f59e0b;border-radius:1px;margin-right:4px;vertical-align:middle"></span>Target</span>
+      </div>
+      <svg id="chart-svg" style="width:100%;height:auto;display:block;overflow:visible"></svg>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 18px;border-bottom:1px solid #1c2235;font-size:13px;font-weight:700">Year by year</div>
+      <div style="overflow-x:auto"><table><thead><tr id="t-head"></tr></thead><tbody id="t-body"></tbody></table></div>
+    </div>
+    <div class="note"><b style="color:#6b748e">Notes:</b> Property 1 = gross rent − tax − mortgage. Property 2/3: rent × (1−21% tax) − mortgage payment; down payment drawn from ETF portfolio. 4% rule: portfolio × 4% × (1−26% capital gains tax) ÷ 12, active from year 10. Portfolio starts at €45,000. Emergency fund and other assets excluded.</div>
+  </div>
+</div>
+
+<script>
+var BOOLS = { inflOn: false, p2on: true, p3on: false };
+
+function togBool(k) {
+  BOOLS[k] = !BOOLS[k];
+  var on = BOOLS[k];
+  var colors = { inflOn: '#f59e0b', p2on: '#f59e0b', p3on: '#a78bfa' };
+  var col = colors[k] || '#5b8df6';
+  document.getElementById('trk-'+k).style.background = on ? col : '#1e2640';
+  document.getElementById('thm-'+k).style.left = on ? '18px' : '2px';
+  document.getElementById('lbl-'+k).style.color = on ? '#e8ecf6' : '#6b748e';
+  if (k === 'inflOn') document.getElementById('infl-row').style.display = on ? 'block' : 'none';
+  if (k === 'p2on') {
+    document.getElementById('p2-fields').style.display = on ? 'block' : 'none';
+    document.getElementById('p2-box-outer').className = 'prop-box' + (on ? ' on' : '');
+  }
+  if (k === 'p3on') {
+    document.getElementById('p3-fields').style.display = on ? 'block' : 'none';
+    document.getElementById('p3-box-outer').className = 'prop-box' + (on ? ' on3' : '');
+  }
+  go();
+}
+
+function v(id) { return parseFloat(document.getElementById('f-'+id).value) || 0; }
+
+function fmt(n) { return '€' + Math.round(n).toLocaleString('it-IT'); }
+function fmtK(n) { return '€' + (n/1000).toFixed(0) + 'k'; }
+function fmtP(n) { return n.toFixed(1) + '%'; }
+
+function mort(pr, rt, yr) {
+  var r = rt / 100 / 12, n = yr * 12;
+  if (r < 0.00001) return pr / n;
+  return pr * (r * Math.pow(1+r,n)) / (Math.pow(1+r,n) - 1);
+}
+
+function irow(lbl, val, col, sep) {
+  return '<div class="irow"' + (sep ? ' style="border-top:1px solid #1e2640;margin-top:4px;padding-top:4px"' : '') + '>'
+    + '<span class="lbl">' + lbl + '</span>'
+    + '<span class="val"' + (col ? ' style="color:'+col+'"' : '') + '>' + val + '</span>'
+    + '</div>';
+}
+
+function go() {
+  var target = v('target'), infl = BOOLS.inflOn ? v('infl') : 0;
+  var salary = v('salary'), savings = v('savings'), etfRet = v('etfRet');
+  var p1g = v('p1g'), p1b = v('p1b'), p1t = v('p1t'), p1m = v('p1m');
+  var p2on = BOOLS.p2on, p3on = BOOLS.p3on;
+  var p2p = v('p2p'), p2l = v('p2l'), p2r = v('p2r'), p2y = v('p2y'), p2yr = Math.round(v('p2yr'));
+  var p3p = v('p3p'), p3l = v('p3l'), p3r = v('p3r'), p3y = v('p3y'), p3yr = Math.round(v('p3yr'));
+
+  var p1tax = p1b * p1t / 100, p1rn = p1g - p1tax, p1c = p1rn - p1m;
+  var income = salary + p1rn, sr = income > 0 ? savings / income * 100 : 0;
+  var etfAmt = Math.min(v('etfAmt'), savings);
+  var etfM = etfAmt;
+
+  // Sidebar info boxes
+  document.getElementById('income-box').innerHTML =
+    irow('Salary', fmt(salary)) + irow('Net rental income', fmt(p1rn)) +
+    irow('Total income', fmt(income), '#5b8df6', true) +
+    irow('Monthly savings', fmt(savings), '#2dd4a0') + irow('Estimated expenses', fmt(income - savings)) +
+    irow('Savings rate', fmtP(sr), sr>=40?'#2dd4a0':sr>=25?'#f59e0b':'#f87171', true);
+
+  document.getElementById('savings-box').innerHTML =
+    irow('→ ETF/month', fmt(etfAmt), '#5b8df6') +
+    irow('→ Cash/month', fmt(Math.max(0, savings - etfAmt)), '#f59e0b') +
+    irow('% savings in ETF', etfAmt>0&&savings>0 ? fmtP(Math.min(100,etfAmt/savings*100)) : '0.0%', '#3d4560');
+
+  document.getElementById('p1-box').innerHTML =
+    irow('Tax (' + fmtP(p1t) + ' on ' + fmt(p1b) + ')', '-' + fmt(p1tax), '#f87171') +
+    irow('After-tax rental income', fmt(p1rn)) +
+    irow('Net FIRE contribution', (p1c>=0?'+':'') + fmt(p1c), p1c>=0?'#2dd4a0':'#f87171', true);
+
+  if (p2on) {
+    var p2acc=p2p*(1-p2l/100), p2rata=mort(p2p*p2l/100,p2r,25), p2rn=(p2p*p2y/100)/12*.79, p2cf=p2rn-p2rata;
+    document.getElementById('p2-box').innerHTML =
+      irow('Down payment', fmt(p2acc)) + irow('Est. mortgage payment', fmt(p2rata)+'/mo') +
+      irow('Net rental (21% tax)', fmt(p2rn)+'/mo') +
+      irow('Net cash flow', (p2cf>=0?'+':'')+fmt(p2cf)+'/mo', p2cf>=0?'#2dd4a0':'#f87171', true);
+  }
+  if (p3on) {
+    var p3acc=p3p*(1-p3l/100), p3rata=mort(p3p*p3l/100,p3r,25), p3rn=(p3p*p3y/100)/12*.79, p3cf=p3rn-p3rata;
+    document.getElementById('p3-box').innerHTML =
+      irow('Down payment', fmt(p3acc)) + irow('Est. mortgage payment', fmt(p3rata)+'/mo') +
+      irow('Net rental (21% tax)', fmt(p3rn)+'/mo') +
+      irow('Net cash flow', (p3cf>=0?'+':'')+fmt(p3cf)+'/mo', p3cf>=0?'#2dd4a0':'#f87171', true);
+  }
+
+  // Calc data
+  var pf=45000, p2b=false, p3b=false, p2pay=0, p2rent=0, p3pay=0, p3rent=0;
+  var rows = [];
+  for (var y=0; y<=12; y++) {
+    var tgt = target * Math.pow(1 + infl/100, y);
+    if (y===p2yr && p2on && !p2b) { p2b=true; pf=Math.max(0,pf-p2p*(1-p2l/100)); p2pay=mort(p2p*p2l/100,p2r,25); p2rent=(p2p*p2y/100)/12; }
+    if (y===p3yr && p3on && !p3b) { p3b=true; pf=Math.max(0,pf-p3p*(1-p3l/100)); p3pay=mort(p3p*p3l/100,p3r,25); p3rent=(p3p*p3y/100)/12; }
+    if (y>0) pf = pf*(1+etfRet/100) + etfM*12;
+    var rental = p1c + (p2b?p2rent*.79-p2pay:0) + (p3b?p3rent*.79-p3pay:0);
+    var etfW = pf*.04*.74/12;
+    rows.push({ y:y, age:32+y, rental:Math.round(rental), etfW:Math.round(etfW),
+      total:Math.round(rental+(y>=10?etfW:0)), tgt:Math.round(tgt), pf:Math.round(pf),
+      props:1+(p2b?1:0)+(p3b?1:0) });
+  }
+
+  var fire = rows.find(function(r){ return r.total >= r.tgt; });
+  var r10 = rows[10], tgt10 = r10.tgt, cur = r10.total;
+  var pct = Math.min(100, Math.round(cur/tgt10*100));
+  var pcol = pct>=100?'#2dd4a0':pct>=65?'#f59e0b':'#5b8df6';
+
+  // Hero
+  document.getElementById('hero-card').innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
+    + '<div><div style="font-size:10px;color:#3d4560;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Goal coverage · Year 10</div>'
+    + '<div style="display:flex;align-items:baseline;gap:8px">'
+    + '<span class="hero-pct" style="color:'+pcol+'">'+pct+'%</span>'
+    + '<div><div style="font-size:13px;color:#e8ecf6;font-weight:600">'+fmt(cur)+'/mo</div>'
+    + '<div style="font-size:11px;color:#6b748e">target '+fmt(tgt10)+'/mo</div></div></div></div>'
+    + '<div class="fire-badge" style="background:'+(fire?'#2dd4a012':'#f8717112')+';border-color:'+(fire?'#2dd4a040':'#f8717140')+'">'
+    + '<div style="font-size:9px;color:#3d4560;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">FIRE achieved</div>'
+    + (fire
+      ? '<div style="font-size:20px;font-weight:800;color:#2dd4a0;font-family:monospace">Year '+fire.y+'</div><div style="font-size:11px;color:#6b748e;margin-top:2px">Age '+fire.age+' · in '+fire.y+' years</div>'
+      : '<div style="font-size:20px;font-weight:800;color:#f87171;font-family:monospace">&gt;12 years</div><div style="font-size:11px;color:#6b748e;margin-top:2px">Adjust parameters</div>')
+    + '</div></div>'
+    + '<div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%;background:linear-gradient(90deg,#5b8df6,'+pcol+')"></div></div>'
+    + '<div style="display:flex;justify-content:space-between;font-size:11px">'
+    + '<span style="color:#3d4560">🏠 Primary property always active</span>'
+    + '<span style="color:'+(pct>=100?'#2dd4a0':'#f87171')+'">'+(pct>=100?'✓ goal reached':'gap '+fmt(Math.max(0,tgt10-cur))+'/mo')+'</span></div>';
+
+  // KPIs
+  var kdata = [
+    {l:'Net rental · Y10', v:fmt(r10.rental), s:'from '+r10.props+' properties', c:'#2dd4a0'},
+    {l:'ETF 4% net · Y10', v:fmt(r10.etfW), s:'on portfolio '+fmtK(r10.pf), c:'#a78bfa'},
+    {l:'ETF portfolio · Y10', v:fmtK(r10.pf), s:'€45k + '+fmt(etfAmt)+'/mese @ '+etfRet+'%', c:'#5b8df6'}
+  ];
+  document.getElementById('kpis').innerHTML = kdata.map(function(k){
+    return '<div class="kpi"><div class="kpi-l">'+k.l+'</div><div class="kpi-v" style="color:'+k.c+'">'+k.v+'</div><div class="kpi-s">'+k.s+'</div></div>';
+  }).join('');
+
+  // Chart SVG
+  var W=700,H=190,PL=52,PR=6,PT=6,PB=22,iW=W-PL-PR,iH=H-PT-PB;
+  var allV=rows.map(function(r){return Math.max(r.total,r.tgt);});
+  var mx=Math.max.apply(null,allV)*1.12||3000;
+  function cx(i){return PL+i*(iW/12);}
+  function cy(val){return PT+iH-Math.min(Math.max(val,0),mx)/mx*iH;}
+  var rPts=rows.map(function(r,i){return cx(i)+','+cy(r.rental);}).join(' ');
+  var tPts=rows.map(function(r,i){return cx(i)+','+cy(r.total);}).join(' ');
+  var gPts=rows.map(function(r,i){return cx(i)+','+cy(r.tgt);}).join(' ');
+  var rArea=rPts+' '+cx(12)+','+cy(0)+' '+cx(0)+','+cy(0);
+  var eTopPts=rows.map(function(r,i){return cx(i)+','+cy(r.total);});
+  var eBotPts=rows.map(function(r,i){return cx(i)+','+cy(r.rental);}).reverse();
+  var eArea=eTopPts.concat(eBotPts).join(' ');
+  var grid='',ylbl='',xlbl='';
+  for(var i=0;i<=4;i++){var gv=Math.round(mx*i/4/200)*200,yy=cy(gv);grid+='<line x1="'+PL+'" y1="'+yy+'" x2="'+(W-PR)+'" y2="'+yy+'" stroke="#1e2640" stroke-width="1"/>';ylbl+='<text x="'+(PL-3)+'" y="'+(yy+4)+'" text-anchor="end" fill="#3d4560" font-size="9">'+fmt(gv)+'</text>';}
+  for(var j=0;j<=12;j+=2){xlbl+='<text x="'+cx(j)+'" y="'+(H-5)+'" text-anchor="middle" fill="#3d4560" font-size="9">A'+j+'</text>';}
+  var fline='';
+  if(fire){var fx=cx(fire.y);fline='<line x1="'+fx+'" y1="'+PT+'" x2="'+fx+'" y2="'+(H-PB)+'" stroke="#2dd4a0" stroke-width="1.5" stroke-dasharray="4,3"/><text x="'+(fx+3)+'" y="'+(PT+11)+'" fill="#2dd4a0" font-size="10" font-weight="600">🎯 Y'+fire.y+'</text>';}
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;overflow:visible">'
+    +'<polygon points="'+rArea+'" fill="#2dd4a0" opacity=".1"/>'
+    +'<polygon points="'+eArea+'" fill="#a78bfa" opacity=".12"/>'
+    +'<polyline points="'+gPts+'" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>'
+    +'<polyline points="'+rPts+'" fill="none" stroke="#2dd4a0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'
+    +'<polyline points="'+tPts+'" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+    +grid+ylbl+xlbl+fline
+    +rows.map(function(r,i){return'<circle cx="'+cx(i)+'" cy="'+cy(r.rental)+'" r="2.5" fill="#2dd4a0"/><circle cx="'+cx(i)+'" cy="'+cy(r.total)+'" r="2.5" fill="#a78bfa"/>';}).join('')
+    +'</svg>';
+  document.getElementById('chart-svg').outerHTML = svg.replace('<svg','<svg id="chart-svg"');
+
+  // Table
+  var heads = ['Year','Age','Prop.','Rental','ETF 4%','Total','Target','Portfolio','✓'];
+  document.getElementById('t-head').innerHTML = heads.map(function(h){return '<th>'+h+'</th>';}).join('');
+  document.getElementById('t-body').innerHTML = rows.map(function(r,i){
+    var ok=r.total>=r.tgt, isFS=ok&&(i===0||rows[i-1].total<rows[i-1].tgt);
+    return '<tr style="background:'+(isFS?'#2dd4a00c':'transparent')+'">'
+      +'<td style="color:#3d4560">'+r.y+'</td>'
+      +'<td style="color:#e8ecf6;font-weight:700">'+r.age+'</td>'
+      +'<td style="color:#6b748e">'+r.props+'</td>'
+      +'<td style="color:#2dd4a0">'+fmt(r.rental)+'</td>'
+      +'<td style="color:'+(r.y>=10?'#a78bfa':'#3d4560')+'">'+(r.y>=10?fmt(r.etfW):'—')+'</td>'
+      +'<td style="color:'+(ok?'#2dd4a0':'#f59e0b')+';font-weight:700">'+fmt(r.total)+'</td>'
+      +'<td style="color:#6b748e">'+fmt(r.tgt)+'</td>'
+      +'<td style="color:#5b8df6">'+fmtK(r.pf)+'</td>'
+      +'<td style="text-align:center">'+(ok?'<span style="color:#2dd4a0">✓</span>':'<span style="color:#3d4560">—</span>')+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+// Init toggles
+togBool('p2on');
+go();
+</script>
+</body>
+</html>
